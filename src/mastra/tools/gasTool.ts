@@ -1,7 +1,10 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import 'dotenv/config';
+import axios from 'axios';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 
+const agent = new SocksProxyAgent('socks5h://127.0.0.1:1080');
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 const gasTrackerUrl = `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${etherscanApiKey}`;
 
@@ -28,8 +31,16 @@ export const gasTool = createTool({
 });
 
 const getGasPrice = async () => {
-  return fetch(gasTrackerUrl)
-    .then(response => response.json())
+  // return fetch(gasTrackerUrl)
+  return axios.get(gasTrackerUrl,
+    {
+      httpAgent: agent,
+      httpsAgent: agent,
+      proxy: false,                 // 禁用 axios 的 env 代理推断，避免冲突
+      timeout: 20000,
+      transitional: { clarifyTimeoutError: true },
+    })
+    .then(response => response.data)
     .then(data => {
       return {
         status: "1" as const,
