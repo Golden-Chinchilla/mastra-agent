@@ -2,8 +2,9 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import 'dotenv/config';
 
-import { setGlobalDispatcher, ProxyAgent } from 'undici';
-setGlobalDispatcher(new ProxyAgent('http://127.0.0.1:7890')); // 全局代理
+// Workers 的网络是跑在 Cloudflare 边缘，部署时不需要本地 HTTP 代理。
+// import { setGlobalDispatcher, ProxyAgent } from 'undici';
+// setGlobalDispatcher(new ProxyAgent('http://127.0.0.1:7890'));
 
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 const gasTrackerUrl = `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${etherscanApiKey}`;
