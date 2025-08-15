@@ -1,10 +1,10 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import 'dotenv/config';
-import axios from 'axios';
-import { SocksProxyAgent } from 'socks-proxy-agent';
 
-const agent = new SocksProxyAgent('socks5h://127.0.0.1:1080');
+import { setGlobalDispatcher, ProxyAgent } from 'undici';
+setGlobalDispatcher(new ProxyAgent('http://127.0.0.1:7890')); // 全局代理
+
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 const gasTrackerUrl = `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${etherscanApiKey}`;
 
@@ -22,8 +22,8 @@ export const gasTool = createTool({
       FastGasPrice: z.string(),
       suggestBaseFee: z.string(),
       gasUsedRatio: z.string(),
-    }).strict(), // result 里不能多字段
-  }).strict(),   // 顶层也不能多字段
+    }).strict(),
+  }).strict(),
 
   execute: async (_ctx: any) => {
     return await getGasPrice();
@@ -31,17 +31,17 @@ export const gasTool = createTool({
 });
 
 const getGasPrice = async () => {
-  // return fetch(gasTrackerUrl)
-  return axios.get(gasTrackerUrl,
-    {
-      httpAgent: agent,
-      httpsAgent: agent,
-      proxy: false,                 // 禁用 axios 的 env 代理推断，避免冲突
-      timeout: 20000,
-      transitional: { clarifyTimeoutError: true },
+  return fetch(gasTrackerUrl, {
+    method: 'GET',
+    // headers: { 'Accept': 'application/json' }, // 可选
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return await res.json();
     })
-    .then(response => response.data)
-    .then(data => {
+    .then((data) => {
       return {
         status: "1" as const,
         message: String(data.message),
@@ -53,11 +53,10 @@ const getGasPrice = async () => {
           suggestBaseFee: String(data.result.suggestBaseFee),
           gasUsedRatio: String(data.result.gasUsedRatio),
         }
-      }
+      };
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('Error fetching gas price:', error);
       throw new Error('Failed to fetch gas price');
-    }
-    );
-}
+    });
+};
